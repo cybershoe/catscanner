@@ -13,8 +13,8 @@ commands and responses between sensors and a data collector over an XBee radio l
   - Messages without this header are discarded
 - 1 byte: GGNF version
   - Currently 0x01 (version 1)
-- 8 bytes - Station ID
-  - This is the low 8 bytes of the XBee MAC
+- 4 bytes - Station ID
+  - This is the low 4 bytes of the XBee MAC
   - For collector -> sensor traffic, this is the destination
   - For sensor -> collector traffic, this is the source
 - 4 bytes - Time
