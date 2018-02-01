@@ -9,7 +9,8 @@
 #include <SoftwareSerial.h>
 
 SoftwareSerial rfid(2,4);
-String addr;
+
+unsigned long addr;
 String xbeeBuf;
 String rfidBuf;
 
@@ -24,11 +25,13 @@ void setup() {
   #endif
 
   // Get XBee HW id (i.e.: low half of MAC)
-  addr = xbeeCmd("ATSL");
-  addr.trim();
-  DEBUG_PRINT("XBee address " + addr);
+  char addrs[9];
+  xbeeCmd("ATSL").toCharArray(addrs, 9);
+  addr = strtoul(addrs, NULL, 16);
+  DEBUG_PRINT("XBee address " + String(addr, HEX));
+
   // Check in with controller
-  Serial.println("Reader " + addr + " checking in");
+  Serial.println("Reader " + String(addr, HEX) + " checking in");
   DEBUG_PRINT("Sent checkin");
   
   // Init RFID reader
@@ -75,20 +78,24 @@ void checkXbee() {
 
 void sendMessage(byte mType, byte rId, byte sType, String data) {
   long ts = 1517332839;
-  byte buf[data.length() + 20] = "abcdefghijklmnopqrst";
+  byte buf[data.length() + 16] = "abcdefghijklmnopqrst";
   buf[0] = 0x7A;  // Magic
   buf[1] = 0x69;  // number
   buf[2] = 0x1;  // Version 1
-  addr.getBytes(buf + 3, addr.length()+1); // Station ID
-  buf[11] = (ts >> 24) & 0xFF;  // Timestamp
-  buf[12] = (ts >> 16) & 0xFF;
-  buf[13] = (ts >> 8) & 0xFF;
-  buf[14] = ts & 0xFF;
-  buf[15] = mType;  // Message type
-  buf[16] = rId;  // Request ID
-  buf[17] = sType;  // Message subtype
-  buf[18] = (uint8_t)data.length();  // Data length
-  data.getBytes(buf + 19, data.length()+1);  // Data
+  buf[3] = (addr >> 24) & 0xFF;  // Station ID
+  buf[4] = (addr >> 16) & 0xFF;
+  buf[5] = (addr >> 8) & 0xFF;
+  buf[6] = addr & 0xFF;
+  //addr.getBytes(buf + 3, addr.length()+1); // Station ID
+  buf[7] = (ts >> 24) & 0xFF;  // Timestamp
+  buf[8] = (ts >> 16) & 0xFF;
+  buf[9] = (ts >> 8) & 0xFF;
+  buf[10] = ts & 0xFF;
+  buf[11] = mType;  // Message type
+  buf[12] = rId;  // Request ID
+  buf[13] = sType;  // Message subtype
+  buf[14] = (uint8_t)data.length();  // Data length
+  data.getBytes(buf + 15, data.length()+1);  // Data
   
   //buf[data.length() + 1] = 0x0;
   Serial.write(buf, data.length()+20);
