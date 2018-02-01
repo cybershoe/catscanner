@@ -98,7 +98,7 @@ void sendMessage(byte mType, byte rId, byte sType, String data) {
   data.getBytes(buf + 15, data.length()+1);  // Data
   
   //buf[data.length() + 1] = 0x0;
-  Serial.write(buf, data.length()+20);
+  Serial.write(buf, data.length()+16);
   DEBUG_PRINT("Last byte in buf value: " + String(buf[data.length()+19], HEX));
 
 
