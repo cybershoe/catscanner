@@ -40,12 +40,18 @@ commands and responses between sensors and a data collector over an XBee radio l
 
 ### Message Types
 #### 0x01 responses
+- 0x01 Pong
+  - Response to 0x01 ping message
+  - Data: same string as ping message
 - 0x03 Reply reader frequency
   - Response to 0x03 get reader frequency
   - Data: 5 character MOF output
     - nnn.n
 
 #### 0x02 commands
+- 0x01 Ping
+  - Request a response. Include data in responses
+  - Data: up to 64 characters of string data
 - 0x03 Get reader frequency (blocking)
   - Execute MOF command on microchip reader
   - Data: NULL
