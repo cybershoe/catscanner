@@ -173,6 +173,15 @@ void checkRfid() {
 }
 
 void handleXbee(packet &pkt) {
+  switch (pkt.mType) {
+    case 0x02:  // Command packet
+      switch (pkt.sType) {
+        case 0x01: // Ping request
+          sendQ.push(packet{1517332839, 0x1, pkt.rId, 0x1, pkt.data});
+          break;
+      }
+      break;
+  }
   DEBUG_PRINT("mType: " + String(pkt.mType, HEX) + " rId: " + String(pkt.rId, HEX) + " sType: " + String(pkt.sType, HEX) + " data: " + pkt.data);
 }
 
