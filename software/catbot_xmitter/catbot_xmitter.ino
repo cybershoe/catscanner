@@ -12,6 +12,7 @@
 SoftwareSerial rfid(2,4);
 
 struct packet {
+  long ts;
   byte mType;
   byte rId;
   byte sType;
@@ -19,7 +20,9 @@ struct packet {
 };
 
 unsigned long addr;
-String xbeeBuf;
+packet xbeeBuf;
+byte xbeeIdx = 0;
+byte xbeeLen = 0;
 String rfidBuf;
 
 QueueList <packet> sendQ;
@@ -57,35 +60,111 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if (Serial.available()) {
-    DEBUG_PRINT("Xbee has bytes");
-    checkXbee();
-  }
-
   // Main loop
+  checkXbee();
   checkRfid();
   sendMessages();
 }
 
 void checkXbee() {
-  while (Serial.available()) {
-    char b = Serial.read();
-    DEBUG_PRINT("Got a character: " + String(b, HEX));
-    if (b == '\r') {
-      DEBUG_PRINT(xbeeBuf);
-      xbeeBuf = "";
-    } else {
-      xbeeBuf.concat(b);
+  if (Serial.available()) {
+    byte b = Serial.read();
+    switch (xbeeIdx) {
+      case 0:
+        xbeeIdx = (b == 0x7A) ? (xbeeIdx + 1) : 0; // Valid magic number
+        break;
+      case 1:
+        xbeeIdx = (b == 0x69) ? (xbeeIdx + 1) : 0;
+        break;
+      case 2:
+        xbeeIdx = (b == 0x01) ? (xbeeIdx + 1) : 0; // Correct version
+        break;
+      case 3:
+        if (b == ((addr >> 24) & 0xFF)) {
+          xbeeIdx++;
+        } else {
+          xbeeIdx = 0;
+        }
+        break;
+      case 4:
+        if (b == ((addr >> 16) & 0xFF)) {
+          xbeeIdx++;
+        } else {
+          xbeeIdx = 0;
+        }
+        break;
+      case 5:
+        if (b == ((addr >> 8) & 0xFF)) {
+          xbeeIdx++;
+        } else {
+          xbeeIdx = 0;
+        }
+        break;
+      case 6:
+        if (b == (addr & 0xFF)) {
+          xbeeIdx++;
+        } else {
+          xbeeIdx = 0;
+        }
+        break;
+      case 7:
+        xbeeBuf.ts += b;
+        xbeeIdx++;
+        break;
+      case 8:
+        xbeeBuf.ts = (xbeeBuf.ts << 8) + b;
+        xbeeIdx++;
+        break;
+      case 9:
+        xbeeBuf.ts = (xbeeBuf.ts << 8) + b;
+        xbeeIdx++;
+        break;
+      case 10:
+        xbeeBuf.ts = (xbeeBuf.ts << 8) + b;
+        xbeeIdx++;
+        break;
+      case 11:
+        xbeeBuf.mType = b;
+        xbeeIdx++;
+        break;
+      case 12:
+        xbeeBuf.rId = b;
+        xbeeIdx++;
+        break;
+      case 13:
+        xbeeBuf.sType = b;
+        xbeeIdx++;
+        break;
+      case 14:
+        if (b <= 64) {
+          xbeeLen = b;
+          xbeeBuf.data = "";
+          xbeeIdx++;
+        } else { // Invalid data length
+          DEBUG_PRINT("Data length too long: " + String(b,HEX));
+          xbeeIdx = 0;
+        }
+        break;
+      default:
+        if (b == 0x0) { // End of data
+          handleXbee(xbeeBuf);
+          xbeeIdx = 0;
+        } else if (xbeeIdx >= (xbeeLen + 15)) { // Past end of data length
+          DEBUG_PRINT("Past len");
+          xbeeIdx = 0;
+        } else {
+          xbeeBuf.data.concat((char)b);
+          xbeeIdx++;
+        }
     }
   }
-  DEBUG_PRINT("XBee buffer: " + xbeeBuf);
 }
 
 void checkRfid() {
   if (rfid.available()) {
     char b = rfid.read();
     if (b == 0xd || rfidBuf.length() == 64) {
-      sendQ.push(packet{0x3, 0x0, 0x1, rfidBuf});
+      sendQ.push(packet{1517332839, 0x3, 0x0, 0x1, rfidBuf});
       rfidBuf = "";
     } else {
       rfidBuf.concat(b);
@@ -93,10 +172,13 @@ void checkRfid() {
   }
 }
 
+void handleXbee(packet &pkt) {
+  DEBUG_PRINT("mType: " + String(pkt.mType, HEX) + " rId: " + String(pkt.rId, HEX) + " sType: " + String(pkt.sType, HEX) + " data: " + pkt.data);
+}
+
 void sendMessages() {  // Trasmit 
   if (!sendQ.isEmpty()) { // Only send one packet per iteration to prevent buffer blocking
     packet pkt = sendQ.pop();
-    long ts = 1517332839;
     byte buf[pkt.data.length() + 16];
     buf[0] = 0x7A;  // Magic
     buf[1] = 0x69;  // number
@@ -105,10 +187,10 @@ void sendMessages() {  // Trasmit
     buf[4] = (addr >> 16) & 0xFF;
     buf[5] = (addr >> 8) & 0xFF;
     buf[6] = addr & 0xFF;
-    buf[7] = (ts >> 24) & 0xFF;  // Timestamp
-    buf[8] = (ts >> 16) & 0xFF;
-    buf[9] = (ts >> 8) & 0xFF;
-    buf[10] = ts & 0xFF;
+    buf[7] = (pkt.ts >> 24) & 0xFF;  // Timestamp
+    buf[8] = (pkt.ts >> 16) & 0xFF;
+    buf[9] = (pkt.ts >> 8) & 0xFF;
+    buf[10] = pkt.ts & 0xFF;
     buf[11] = pkt.mType;  // Message type
     buf[12] = pkt.rId;  // Request ID
     buf[13] = pkt.sType;  // Message subtype
