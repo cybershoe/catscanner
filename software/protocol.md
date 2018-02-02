@@ -2,7 +2,7 @@
 
 ## Summary
 GGPF is a simple message format for exchanging short, arbitrary
-commands and responses between sensors and a data collector over an XBee radio link. The maximum message size is 64 bytes (to fit inside an unfragmented XBee S2C frame)
+commands and responses between sensors and a data collector over an XBee radio link. The maximum payload size is 64 bytes (to fit inside an unfragmented XBee S2C frame)
 
 ## Message Format
 
@@ -39,7 +39,7 @@ commands and responses between sensors and a data collector over an XBee radio l
   - 0x00
 
 ### Message Types
-#### 0x01 response
+#### 0x01 responses
 - 0x03 Reply reader frequency
   - Response to 0x03 get reader frequency
   - Data: 5 character MOF output
@@ -48,9 +48,20 @@ commands and responses between sensors and a data collector over an XBee radio l
 #### 0x02 commands
 - 0x03 Get reader frequency (blocking)
   - Execute MOF command on microchip reader
+  - Data: NULL
 
-#### 0x03 event
+#### 0x03 events
 - 0x01 Tag Scan
   - The scanner has read a microchip
   - Data: 16 character FDX-B read
-    - &lt;3 digit manufacturer&gt;_&lt;12 digit tag id&gt;
+    - &lt;3 digit manufacturer&gt;\_&lt;12 digit tag id&gt;
+
+#### 0x04 logging
+- 0x01 Error Message
+  - Indicates an abnormal condition likely to prevent normal operation of the device
+- 0x02 Warning Message
+  - Indicates an abnormal condition that may cause unexpected behaviour, but is not necessarily an Error
+- 0x03 Informational Message
+  - Normal messages that are part of the regular operation of the device
+- 0x04 Debug Message
+  - Detailed troubleshooting messages, normally used during development only.
