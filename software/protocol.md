@@ -2,7 +2,7 @@
 
 ## Summary
 GGPF is a simple message format for exchanging short, arbitrary
-commands and responses between sensors and a data collector over an XBee radio link. The maximum payload size is 64 bytes (to fit inside an unfragmented XBee S2C frame)
+commands and responses between sensors and a data collector over an XBee radio link. The maximum payload size is 64 bytes (to fit inside an unfragmented XBee S2C frame along with 16 bytes of header data)
 
 ## Message Format
 
