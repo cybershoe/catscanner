@@ -7,12 +7,23 @@
 #endif
 
 #include <SoftwareSerial.h>
+#include <QueueList.h>
 
 SoftwareSerial rfid(2,4);
+
+struct packet {
+  byte mType;
+  byte rId;
+  byte sType;
+  String data;  
+};
 
 unsigned long addr;
 String xbeeBuf;
 String rfidBuf;
+
+QueueList <packet> sendQ;
+QueueList <packet> recvQ;
 
 void setup() {
 
@@ -46,20 +57,14 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  if (rfid.available()) {
-    //Serial.println(rfid.readStringUntil("\r"));
-    String data = rfid.readStringUntil("\r");
-    data.trim();
-    sendMessage(0x3, 0x0, 0x1, data);
-  }
-
   if (Serial.available()) {
     DEBUG_PRINT("Xbee has bytes");
     checkXbee();
   }
-  /*xbee.println("Operating frequency: " + rfidCmd("MOF"));
-  delay(5000);
-  */
+
+  // Main loop
+  checkRfid();
+  sendMessages();
 }
 
 void checkXbee() {
@@ -76,32 +81,43 @@ void checkXbee() {
   DEBUG_PRINT("XBee buffer: " + xbeeBuf);
 }
 
-void sendMessage(byte mType, byte rId, byte sType, String data) {
-  long ts = 1517332839;
-  byte buf[data.length() + 16] = "abcdefghijklmnopqrst";
-  buf[0] = 0x7A;  // Magic
-  buf[1] = 0x69;  // number
-  buf[2] = 0x1;  // Version 1
-  buf[3] = (addr >> 24) & 0xFF;  // Station ID
-  buf[4] = (addr >> 16) & 0xFF;
-  buf[5] = (addr >> 8) & 0xFF;
-  buf[6] = addr & 0xFF;
-  //addr.getBytes(buf + 3, addr.length()+1); // Station ID
-  buf[7] = (ts >> 24) & 0xFF;  // Timestamp
-  buf[8] = (ts >> 16) & 0xFF;
-  buf[9] = (ts >> 8) & 0xFF;
-  buf[10] = ts & 0xFF;
-  buf[11] = mType;  // Message type
-  buf[12] = rId;  // Request ID
-  buf[13] = sType;  // Message subtype
-  buf[14] = (uint8_t)data.length();  // Data length
-  data.getBytes(buf + 15, data.length()+1);  // Data
-  
-  //buf[data.length() + 1] = 0x0;
-  Serial.write(buf, data.length()+16);
-  DEBUG_PRINT("Last byte in buf value: " + String(buf[data.length()+19], HEX));
+void checkRfid() {
+  while (rfid.available()) {
+    char b = rfid.read();
+    if (b == 0xd || rfidBuf.length() == 64) {
+      sendQ.push(packet{0x3, 0x0, 0x1, rfidBuf});
+      rfidBuf = "";
+    } else {
+      rfidBuf.concat(b);
+    }
+  }
+}
 
-
+void sendMessages() {
+  while(!sendQ.isEmpty()) {
+    packet pkt = sendQ.pop();
+    long ts = 1517332839;
+    byte buf[pkt.data.length() + 16];
+    buf[0] = 0x7A;  // Magic
+    buf[1] = 0x69;  // number
+    buf[2] = 0x1;  // Version 1
+    buf[3] = (addr >> 24) & 0xFF;  // Station ID
+    buf[4] = (addr >> 16) & 0xFF;
+    buf[5] = (addr >> 8) & 0xFF;
+    buf[6] = addr & 0xFF;
+    buf[7] = (ts >> 24) & 0xFF;  // Timestamp
+    buf[8] = (ts >> 16) & 0xFF;
+    buf[9] = (ts >> 8) & 0xFF;
+    buf[10] = ts & 0xFF;
+    buf[11] = pkt.mType;  // Message type
+    buf[12] = pkt.rId;  // Request ID
+    buf[13] = pkt.sType;  // Message subtype
+    buf[14] = (uint8_t)pkt.data.length();  // Data length
+    pkt.data.getBytes(buf + 15, pkt.data.length()+1);  // Data
+    
+    //buf[data.length() + 1] = 0x0;
+    Serial.write(buf, pkt.data.length()+16);
+  }
 }
 
 String xbeeCmd(String cmd){
@@ -125,7 +141,9 @@ String xbeeCmd(String cmd){
 String rfidCmd(String cmd) {
   rfid.println(cmd);
   DEBUG_PRINT("Sent command to RFID: " + cmd);
+  rfid.setTimeout(5000);
   String result = rfid.readStringUntil("\r");
+  rfid.setTimeout(50);
   result.trim();
   DEBUG_PRINT("Result from RFID: " + result);
   return result;

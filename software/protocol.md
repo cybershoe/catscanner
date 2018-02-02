@@ -1,17 +1,17 @@
-# Genericor Generic Message Format
+# Genericor Generic Packet Format
 
 ## Summary
-GGMF is a simple message format for exchanging short, arbitrary
+GGPF is a simple message format for exchanging short, arbitrary
 commands and responses between sensors and a data collector over an XBee radio link. The maximum message size is 64 bytes (to fit inside an unfragmented XBee S2C frame)
 
 ## Message Format
 
 ### Message Header
 
-- 2 bytes: GGNF Identifier
+- 2 bytes: GGPF Identifier
   - Always 0x7A69
   - Messages without this header are discarded
-- 1 byte: GGNF version
+- 1 byte: GGPF version
   - Currently 0x01 (version 1)
 - 4 bytes - Station ID
   - This is the low 4 bytes of the XBee MAC
@@ -34,6 +34,23 @@ commands and responses between sensors and a data collector over an XBee radio l
 - 1 byte: Data length
   - Identifies the number of bytes remaining in the message.
   - Valid range: 0-64
-- 0-64 bytes - Message data
+- 0-64 bytes - Message data (string)
 - 1 byte: Terminator
   - 0x00
+
+### Message Types
+#### 0x01 response
+- 0x03 Reply reader frequency
+  - Response to 0x03 get reader frequency
+  - Data: 5 character MOF output
+    - nnn.n
+
+#### 0x02 commands
+- 0x03 Get reader frequency (blocking)
+  - Execute MOF command on microchip reader
+
+#### 0x03 event
+- 0x01 Tag Scan
+  - The scanner has read a microchip
+  - Data: 16 character FDX-B read
+    - &lt;3 digit manufacturer&gt;_&lt;12 digit tag id&gt;
