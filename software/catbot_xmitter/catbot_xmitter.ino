@@ -82,7 +82,7 @@ void checkXbee() {
 }
 
 void checkRfid() {
-  while (rfid.available()) {
+  if (rfid.available()) {
     char b = rfid.read();
     if (b == 0xd || rfidBuf.length() == 64) {
       sendQ.push(packet{0x3, 0x0, 0x1, rfidBuf});
@@ -93,8 +93,8 @@ void checkRfid() {
   }
 }
 
-void sendMessages() {
-  while(!sendQ.isEmpty()) {
+void sendMessages() {  // Trasmit 
+  if (!sendQ.isEmpty()) { // Only send one packet per iteration to prevent buffer blocking
     packet pkt = sendQ.pop();
     long ts = 1517332839;
     byte buf[pkt.data.length() + 16];
