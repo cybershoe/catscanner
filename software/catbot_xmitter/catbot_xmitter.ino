@@ -16,7 +16,7 @@ struct packet {
   byte mType;
   byte rId;
   byte sType;
-  String data;  
+  String data;
 };
 
 unsigned long addr;
@@ -26,7 +26,6 @@ byte xbeeLen = 0;
 String rfidBuf;
 
 QueueList <packet> sendQ;
-QueueList <packet> recvQ;
 
 void setup() {
 
@@ -47,7 +46,7 @@ void setup() {
   // Check in with controller
   Serial.println("Reader " + String(addr, HEX) + " checking in");
   DEBUG_PRINT("Sent checkin");
-  
+
   // Init RFID reader
   rfid.begin(9600);
   while (!rfid) {}
@@ -185,7 +184,7 @@ void handleXbee(packet &pkt) {
   DEBUG_PRINT("mType: " + String(pkt.mType, HEX) + " rId: " + String(pkt.rId, HEX) + " sType: " + String(pkt.sType, HEX) + " data: " + pkt.data);
 }
 
-void sendMessages() {  // Trasmit 
+void sendMessages() {  // Trasmit
   if (!sendQ.isEmpty()) { // Only send one packet per iteration to prevent buffer blocking
     packet pkt = sendQ.pop();
     byte buf[pkt.data.length() + 16];
@@ -205,7 +204,7 @@ void sendMessages() {  // Trasmit
     buf[13] = pkt.sType;  // Message subtype
     buf[14] = (uint8_t)pkt.data.length();  // Data length
     pkt.data.getBytes(buf + 15, pkt.data.length()+1);  // Data
-    
+
     //buf[data.length() + 1] = 0x0;
     Serial.write(buf, pkt.data.length()+16);
   }
@@ -239,4 +238,3 @@ String rfidCmd(String cmd) {
   DEBUG_PRINT("Result from RFID: " + result);
   return result;
 }
-
