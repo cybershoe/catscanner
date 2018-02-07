@@ -52,6 +52,7 @@ void setup() {
   while (!rfid) {}
   rfid.setTimeout(50);
   DEBUG_PRINT("RFID reader initialized");
+  DEBUG_PRINT(rfidCmd("MOF"));
 
   DEBUG_PRINT("Setup complete");
 }
@@ -172,16 +173,18 @@ void checkRfid() {
 }
 
 void handleXbee(packet &pkt) {
+  DEBUG_PRINT("mType: " + String(pkt.mType, HEX) + " rId: " + String(pkt.rId, HEX) + " sType: " + String(pkt.sType, HEX) + " data: " + pkt.data);
   switch (pkt.mType) {
     case 0x02:  // Command packet
       switch (pkt.sType) {
         case 0x01: // Ping request
           sendQ.push(packet{1517332839, 0x1, pkt.rId, 0x1, pkt.data});
           break;
+        case 0x03: // Measure frequency
+          sendQ.push(packet{1517332839, 0x1, pkt.rId, 0x3, rfidCmd("MOF")});
+          break;
       }
-      break;
   }
-  DEBUG_PRINT("mType: " + String(pkt.mType, HEX) + " rId: " + String(pkt.rId, HEX) + " sType: " + String(pkt.sType, HEX) + " data: " + pkt.data);
 }
 
 void sendMessages() {  // Trasmit
